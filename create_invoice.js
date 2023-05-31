@@ -5,17 +5,28 @@ import { program } from "commander";
 const generateInvoice = () => {
 
   program.option('-n, --number <char>');
+  program.option('-d, --date <char>');
   program.parse();
   const options = program.opts();
 
+  let invoiceDate;
+  let workEndDate;
+  let workStartDate;
+
+  if (options.date){
+    invoiceDate = moment(options.date).format("MMM DD, YYYY");
+    workEndDate = moment(options.date).subtract(4, "days").format("MMM DD, YYYY");
+    workStartDate = moment(options.date).subtract(15, "days").format("MMM DD, YYYY");
+  } else {
+    invoiceDate = moment().format("MMM DD, YYYY");
+    workEndDate = moment().subtract(4, "days").format("MMM DD, YYYY");
+    workStartDate = moment().subtract(15, "days").format("MMM DD, YYYY");
+  }
+
   let invoice = {
     number: options.number,
-    date: moment().format("MMM DD, YYYY"),
+    date: invoiceDate
   };
-
-
-  const workEndDate = moment().subtract(4, "days").format("MMM DD, YYYY");
-  const workStartDate = moment().subtract(15, "days").format("MMM DD, YYYY");
 
   invoice.billFromName = "Tamara Bartlett";
   invoice.billFromAddress = process.env.ADDRESS;
