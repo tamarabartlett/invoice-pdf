@@ -1,6 +1,6 @@
 # invoice-pdf
 
-source localenv; node create_invoice.js -n <INVOICE-NUMBER>
+source localenv; node src/create_invoice.js -n <INVOICE-NUMBER> -d <DATE yyyymmdd>
 
 # Create localenv
 export ADDRESS=""
@@ -11,5 +11,4 @@ export BINST_STATE=""
 export RATE=
 
 # TODO
-- Add argument to set date
 - Add auto-email

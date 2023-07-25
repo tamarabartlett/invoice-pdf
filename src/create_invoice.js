@@ -1,30 +1,30 @@
 import moment from "moment";
 import { jsPDF } from "jspdf";
 import { program } from "commander";
+import nodemailer from "nodemailer";
 
-const generateInvoice = () => {
+let invoiceFile;
 
+const getProgramOptions = () => {
   program.option('-n, --number <char>');
   program.option('-d, --date <char>');
   program.parse();
   const options = program.opts();
 
-  let invoiceDate;
-  let workEndDate;
-  let workStartDate;
-
-  if (options.date){
-    invoiceDate = moment(options.date).format("MMM DD, YYYY");
-    workEndDate = moment(options.date).subtract(4, "days").format("MMM DD, YYYY");
-    workStartDate = moment(options.date).subtract(15, "days").format("MMM DD, YYYY");
-  } else {
-    invoiceDate = moment().format("MMM DD, YYYY");
-    workEndDate = moment().subtract(4, "days").format("MMM DD, YYYY");
-    workStartDate = moment().subtract(15, "days").format("MMM DD, YYYY");
+  if (!options.date){
+    options.date = moment();
   }
 
+  return [options.date, options.number]
+}
+
+const generateInvoice = (date, invoiceNumber) => {
+  let invoiceDate = moment(date).format("MMM DD, YYYY");
+  let workEndDate = moment(date).subtract(4, "days").format("MMM DD, YYYY");
+  let workStartDate = moment(date).subtract(15, "days").format("MMM DD, YYYY");
+
   let invoice = {
-    number: options.number,
+    number: invoiceNumber,
     date: invoiceDate
   };
 
@@ -65,7 +65,7 @@ const createInvoiceTitle =  (doc, invoiceData) => {
   doc.text("INVOICE", 15, 2);
   doc.setFontSize(10)
   doc.setFont("helvetica","normal");
-  doc.text(`Invoice #: ${invoiceData.number.toString()}`, 15, 2.5);
+  doc.text(`Invoice #: ${invoiceData.number}`, 15, 2.5);
   doc.text(`Date: ${invoiceData.date}`, 15, 3);
 }
 
@@ -129,8 +129,8 @@ const createNotesAndTerms= (doc, invoiceData) => {
   doc.text(invoiceData.terms, 1, 18.5)
 }
 
-const printInvoice = () => {
-  let invoiceData = generateInvoice()
+const printInvoice = (date, invoiceNumber) => {
+  let invoiceData = generateInvoice(date, invoiceNumber)
 
   const doc = new jsPDF({unit: 'cm'});
 
@@ -143,11 +143,48 @@ const printInvoice = () => {
   createTotals(doc, invoiceData)
   createNotesAndTerms(doc, invoiceData)
 
-  doc.save(`invoice-${invoiceData.number}.pdf`);
+  invoiceFile = `invoice-${invoiceNumber}.pdf`;
+  doc.save(invoiceFile);
 }
 
-const emailInvoice = () => {
+const emailInvoice = (invoiceNumber) => {
+  var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'tamjbart@gmail.com',
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
 
+  let emailSubject = 'Invoice #' + invoiceNumber;
+  let emailBody = 'Invoice #' + invoiceNumber;
+
+  var mailOptions = {
+    from: 'tamjbart@gmail.com',
+    to: 'molly@bartinst.com',
+    bcc: 'tam@bartinst.com',
+    subject: emailSubject,
+    text: emailBody,
+    attachments: [{
+      filename: invoiceFile,
+      path: './' + invoiceFile,
+    }]
+  };
+
+
+  transporter.sendMail(mailOptions, function(error, info){
+    if (error) {
+      console.log('ERROR SENDING MAIL: ' + error);
+    } else {
+      console.log('Email sent: ' + info.response);
+    }
+  });
 }
 
-printInvoice();
+const main = () => {
+  let [date, number] = getProgramOptions();
+  printInvoice(date, number);
+  emailInvoice(number);
+}
+
+main();
