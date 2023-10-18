@@ -8,6 +8,8 @@ let invoiceFile;
 const getProgramOptions = () => {
   program.option('-n, --number <char>');
   program.option('-d, --date <char>');
+  program.option('-a, --adjust <char>');
+  program.option('-ne, --no-email')
   program.parse();
   const options = program.opts();
 
@@ -15,10 +17,10 @@ const getProgramOptions = () => {
     options.date = moment();
   }
 
-  return [options.date, options.number]
+  return [options.date, options.number, options.email, options.adjust]
 }
 
-const generateInvoice = (date, invoiceNumber) => {
+const generateInvoice = (date, invoiceNumber, adjustAmount) => {
   let invoiceDate = moment(date).format("MMM DD, YYYY");
   let workEndDate = moment(date).subtract(4, "days").format("MMM DD, YYYY");
   let workStartDate = moment(date).subtract(15, "days").format("MMM DD, YYYY");
@@ -41,6 +43,10 @@ const generateInvoice = (date, invoiceNumber) => {
   invoice.quantity = 40;
   invoice.rate = process.env.RATE;
   invoice.amount = invoice.quantity * invoice.rate;
+
+  if (adjustAmount){
+    invoice.amount = invoice.amount - adjustAmount;
+  }
 
   return invoice;
 }
@@ -129,8 +135,8 @@ const createNotesAndTerms= (doc, invoiceData) => {
   doc.text(invoiceData.terms, 1, 18.5)
 }
 
-const printInvoice = (date, invoiceNumber) => {
-  let invoiceData = generateInvoice(date, invoiceNumber)
+const printInvoice = (date, invoiceNumber, adjustAmount) => {
+  let invoiceData = generateInvoice(date, invoiceNumber, adjustAmount)
 
   const doc = new jsPDF({unit: 'cm'});
 
@@ -147,44 +153,46 @@ const printInvoice = (date, invoiceNumber) => {
   doc.save(invoiceFile);
 }
 
-const emailInvoice = (invoiceNumber) => {
-  var transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: 'tamjbart@gmail.com',
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+const emailInvoice = (invoiceNumber, sendEmail) => {
+  if(sendEmail){
+    console.log("Sending Email...");
+    var transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'tamjbart@gmail.com',
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
 
-  let emailSubject = 'Invoice #' + invoiceNumber;
-  let emailBody = 'Invoice #' + invoiceNumber;
+    let emailSubject = 'Invoice #' + invoiceNumber;
+    let emailBody = 'Invoice #' + invoiceNumber;
 
-  var mailOptions = {
-    from: 'tamjbart@gmail.com',
-    to: 'molly@bartinst.com',
-    bcc: 'tam@bartinst.com',
-    subject: emailSubject,
-    text: emailBody,
-    attachments: [{
-      filename: invoiceFile,
-      path: './' + invoiceFile,
-    }]
-  };
+    var mailOptions = {
+      from: 'tamjbart@gmail.com',
+      to: 'molly@bartinst.com',
+      bcc: 'tam@bartinst.com',
+      subject: emailSubject,
+      text: emailBody,
+      attachments: [{
+        filename: invoiceFile,
+        path: './' + invoiceFile,
+      }]
+    };
 
-
-  transporter.sendMail(mailOptions, function(error, info){
-    if (error) {
-      console.log('ERROR SENDING MAIL: ' + error);
-    } else {
-      console.log('Email sent: ' + info.response);
-    }
-  });
+    transporter.sendMail(mailOptions, function(error, info){
+      if (error) {
+        console.log('ERROR SENDING MAIL: ' + error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    });
+  }
 }
 
 const main = () => {
-  let [date, number] = getProgramOptions();
-  printInvoice(date, number);
-  emailInvoice(number);
+  let [date, invoiceNumber, sendEmail, adjustAmount] = getProgramOptions();
+  printInvoice(date, invoiceNumber, adjustAmount);
+  emailInvoice(invoiceNumber, sendEmail);
 }
 
 main();
