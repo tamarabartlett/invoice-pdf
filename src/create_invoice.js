@@ -8,7 +8,7 @@ let invoiceFile;
 const getProgramOptions = () => {
   program.option('-n, --number <char>');
   program.option('-d, --date <char>');
-  program.option('-a, --adjust <char>');
+  program.option('-a, --adjust <number>');
   program.option('-ne, --no-email')
   program.parse();
   const options = program.opts();
